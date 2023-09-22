@@ -1,0 +1,54 @@
+
+
+# Criptosistema avanzado llamado "RSA".
+# RSA es un criptosistema de clave pública que se utiliza
+# ampliamente para la seguridad de datos.
+
+import random
+from sympy import mod_inverse
+
+def is_prime(n):
+    if n <= 1:
+        return False
+    if n <= 3:
+        return True
+    if n % 2 == 0 or n % 3 == 0:
+        return False
+    i = 5
+    while i * i <= n:
+        if n % i == 0 or n % (i + 2) == 0:
+            return False
+        i += 6
+    return True
+
+def generate_prime_candidate(length):
+    return random.randint(2 ** (length - 1), 2 ** length - 1)
+
+def generate_prime_number(length):
+    while True:
+        candidate = generate_prime_candidate(length)
+        if is_prime(candidate):
+            return candidate
+
+def generate_keypair(p, q):
+    n = p * q
+    phi = (p - 1) * (q - 1)
+    e = random.randrange(1, phi)
+    g = mod_inverse(e, phi)
+    d = random.randrange(1, phi)
+    return ((e, n), (d, n))
+
+def encrypt(pk, plaintext):
+    key, n = pk
+    ciphertext = [pow(ord(char), key, n) for char in plaintext]
+    return ciphertext
+
+def decrypt(sk, ciphertext):
+    key, n = sk
+    plaintext = [chr(pow(char, key, n)) for char in ciphertext]
+    return ''.join(plaintext)
+
+# Generar claves
+p = generate_prime_number(512)
+q = generate_prime_number(512)
+public_key, private_key = generate_keypair(p, q)
