@@ -1,54 +1,73 @@
 
 
 # Criptosistema avanzado llamado "RSA".
-# RSA es un criptosistema de clave pública que se utiliza
-# ampliamente para la seguridad de datos.
+# RSA es un criptosistema de clave pública.
 
-import random
-from sympy import mod_inverse
+import time
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
-def is_prime(n):
-    if n <= 1:
-        return False
-    if n <= 3:
-        return True
-    if n % 2 == 0 or n % 3 == 0:
-        return False
-    i = 5
-    while i * i <= n:
-        if n % i == 0 or n % (i + 2) == 0:
-            return False
-        i += 6
-    return True
+def generate_keypair():
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+    public_key = private_key.public_key()
 
-def generate_prime_candidate(length):
-    return random.randint(2 ** (length - 1), 2 ** length - 1)
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
 
-def generate_prime_number(length):
-    while True:
-        candidate = generate_prime_candidate(length)
-        if is_prime(candidate):
-            return candidate
+    return private_pem, public_pem
 
-def generate_keypair(p, q):
-    n = p * q
-    phi = (p - 1) * (q - 1)
-    e = random.randrange(1, phi)
-    g = mod_inverse(e, phi)
-    d = random.randrange(1, phi)
-    return ((e, n), (d, n))
-
-def encrypt(pk, plaintext):
-    key, n = pk
-    ciphertext = [pow(ord(char), key, n) for char in plaintext]
+def encrypt(public_key_pem, plaintext):
+    public_key = serialization.load_pem_public_key(public_key_pem)
+    ciphertext = public_key.encrypt(
+        plaintext.encode('utf-8'),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
     return ciphertext
 
-def decrypt(sk, ciphertext):
-    key, n = sk
-    plaintext = [chr(pow(char, key, n)) for char in ciphertext]
-    return ''.join(plaintext)
+def decrypt(private_key_pem, ciphertext):
+    private_key = serialization.load_pem_private_key(private_key_pem, password=None)
+    plaintext = private_key.decrypt(
+        ciphertext,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return plaintext.decode('utf-8')
 
 # Generar claves
-p = generate_prime_number(512)
-q = generate_prime_number(512)
-public_key, private_key = generate_keypair(p, q)
+private_key, public_key = generate_keypair()
+
+# Mensaje a cifrar
+mensaje_original = input("Ingrese el mensaje que desea cifrar: ")
+
+# Simular espera
+print("Esperaa...")
+time.sleep(2)
+print("Ya casiii!!")
+time.sleep(2)
+print("¡Ya está!")
+
+# Cifrar el mensaje
+mensaje_cifrado = encrypt(public_key, mensaje_original)
+time.sleep(1)
+print("Mensaje cifrado:", mensaje_cifrado)
+
+# Descifrar el mensaje
+mensaje_descifrado = decrypt(private_key, mensaje_cifrado)
+print("Mensaje descifrado:", mensaje_descifrado)
