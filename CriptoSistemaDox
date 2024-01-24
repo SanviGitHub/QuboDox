@@ -1,73 +1,138 @@
 
 
-# Criptosistema avanzado llamado "RSA".
-# RSA es un criptosistema de clave pública.
+# Criptosistema avanzado llamado "GRSA".
+# GRSA es una network de criptosistema de clave pública.
+# No se permite Redistribuir este Script
 
-import time
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
-def generate_keypair():
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-    )
+import os
+import base64
+from cryptography.hazmat.primitives import serialization as s
+from cryptography.hazmat.primitives.asymmetric import rsa as a_rsa, padding as a_padding
+from cryptography.hazmat.primitives import ciphers as ci
+from cryptography.hazmat.primitives import hashes as h
+import secrets
+from colorama import init, Fore, Style
+
+init(autoreset=True)
+
+def generate_keys():
+    private_key = a_rsa.generate_private_key(public_exponent=65537, key_size=3072)
     public_key = private_key.public_key()
-
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    )
-    public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-
+    private_pem = private_key.private_bytes(encoding=s.Encoding.PEM, format=s.PrivateFormat.PKCS8, encryption_algorithm=s.NoEncryption())
+    public_pem = public_key.public_bytes(encoding=s.Encoding.PEM, format=s.PublicFormat.SubjectPublicKeyInfo)
     return private_pem, public_pem
 
-def encrypt(public_key_pem, plaintext):
-    public_key = serialization.load_pem_public_key(public_key_pem)
-    ciphertext = public_key.encrypt(
-        plaintext.encode('utf-8'),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return ciphertext
+def rsa_encrypt(public_key_pem, plaintext):
+    public_key = s.load_pem_public_key(public_key_pem)
+    ciphertext = public_key.encrypt(plaintext.encode('utf-8'), a_padding.OAEP(mgf=a_padding.MGF1(algorithm=h.SHA256()), algorithm=h.SHA256(), label=None))
+    return base64.b64encode(ciphertext).decode('utf-8')
 
-def decrypt(private_key_pem, ciphertext):
-    private_key = serialization.load_pem_private_key(private_key_pem, password=None)
-    plaintext = private_key.decrypt(
-        ciphertext,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
+def rsa_decrypt(private_key_pem, ciphertext):
+    private_key = s.load_pem_private_key(private_key_pem, password=None)
+    decoded_ciphertext = base64.b64decode(ciphertext)
+    plaintext = private_key.decrypt(decoded_ciphertext, a_padding.OAEP(mgf=a_padding.MGF1(algorithm=h.SHA256()), algorithm=h.SHA256(), label=None))
     return plaintext.decode('utf-8')
 
-# Generar claves
-private_key, public_key = generate_keypair()
+def sha3_hash(data):
+    digest = h.Hash(h.SHA3_256())
+    digest.update(data.encode('utf-8'))
+    return digest.finalize()
 
-# Mensaje a cifrar
-mensaje_original = input("Ingrese el mensaje que desea cifrar: ")
+def sha3_encrypt(data):
+    hashed_data = sha3_hash(data)
+    return base64.b64encode(hashed_data).decode('utf-8')
 
-# Simular espera
-print("Esperaa...")
-time.sleep(2)
-print("Ya casiii!!")
-time.sleep(2)
-print("¡Ya está!")
+def aes_encrypt(key, plaintext):
+    iv = secrets.token_bytes(16)
+    cipher = ci.Cipher(ci.algorithms.AES(key), ci.modes.CFB(iv))
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update(plaintext.encode('utf-8')) + encryptor.finalize()
+    return base64.b64encode(iv + ciphertext).decode('utf-8')
 
-# Cifrar el mensaje
-mensaje_cifrado = encrypt(public_key, mensaje_original)
-time.sleep(1)
-print("Mensaje cifrado:", mensaje_cifrado)
+def aes_decrypt(key, ciphertext):
+    data = base64.b64decode(ciphertext)
+    iv = data[:16]
+    cipher = ci.Cipher(ci.algorithms.AES(key), ci.modes.CFB(iv))
+    decryptor = cipher.decryptor()
+    decrypted_text = decryptor.update(data[16:]) + decryptor.finalize()
+    return decrypted_text.decode('utf-8')
 
-# Descifrar el mensaje
-mensaje_descifrado = decrypt(private_key, mensaje_cifrado)
-print("Mensaje descifrado:", mensaje_descifrado)
+def print_banner():
+    banner = """
+     _____                  _   ______                             _
+    / ____|                (_) |  ____|                           | |
+   | (___   __ _ _ ____   ___  | |__   _ __   ___ _ __ _   _ _ __ | |_
+    \___ \ / _` | '_ \ \ / / | |  __| | '_ \ / __| '__| | | | '_ \| __|
+    ____) | (_| | | | \ V /| | | |____| | | | (__| |  | |_| | |_) | |_
+   |_____/ \__,_|_| |_|\_/ |_| |______|_| |_|\___|_|   \__, | .__/ \__|
+                                                       __/ | |
+                                                      |___/|_|
+    """
+    print(f"{Fore.YELLOW}{Style.BRIGHT}{banner}{Style.RESET_ALL}")
+
+def print_banner_sha3():
+    banner_sha3 = """
+     _____ _                   ______                             _
+    / ____(_)                 |  ____|                           | |
+   | |  __ _ _ __   __ _  ___| |__   _ __   ___ _ __ _   _ _ __ | |_
+   | | |_ | | '_ \ / _` |/ __|  __| | '_ \ / __| '__| | | | '_ \| __|
+   | |__| | | | | | (_| | (__| |____| | | | (__| |  | |_| | |_) | |_
+    \_____|_|_| |_|\__,_|\___|______|_| |_|\___|_|   \__, | .__/ \__|
+                                                       __/ | |
+                                                      |___/|_|
+    """
+    print(f"{Fore.CYAN}{Style.BRIGHT}{banner_sha3}{Style.RESET_ALL}")
+
+def main():
+    while True:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print_banner()
+        print(f"{Fore.GREEN}[1] AES Encrypt")
+        print(f"{Fore.BLUE}[2] RSA Encrypt")
+        print(f"{Fore.MAGENTA}[3] SHA-3 Hash")
+        print(f"{Fore.YELLOW}[4] AES + RSA Encrypt")
+        print(f"{Fore.CYAN}[5] AES + RSA + SHA-3 Hash Encrypt")
+        print(Style.RESET_ALL)
+        choice = input("Enter your choice (1/2/3/4/5): ")
+        private_key, public_key = generate_keys()
+
+        if choice == '1':
+            message = input("Enter the message you want to encrypt: ")
+            key_aes = secrets.token_bytes(32)
+            encrypted_message = aes_encrypt(key_aes, message)
+            print(f"{Fore.GREEN}Encrypted message: {encrypted_message}")
+
+        elif choice == '2':
+            message = input("Enter the message you want to encrypt: ")
+            encrypted_message_rsa = rsa_encrypt(public_key, message)
+            print(f"{Fore.BLUE}Encrypted message: {encrypted_message_rsa}")
+
+        elif choice == '3':
+            message = input("Enter the message you want to hash: ")
+            hashed_message = sha3_encrypt(message)
+            print(f"{Fore.MAGENTA}SHA-3 Hash: {hashed_message}")
+
+        elif choice == '4':
+            message = input("Enter the message you want to encrypt: ")
+            key_aes = secrets.token_bytes(32)
+            encrypted_message_aes = aes_encrypt(key_aes, message)
+            encrypted_message_rsa = rsa_encrypt(public_key, encrypted_message_aes)
+            print(f"{Fore.YELLOW}Encrypted message with AES + RSA: {encrypted_message_rsa}")
+
+        elif choice == '5':
+            message = input("Enter the message you want to encrypt: ")
+            key_aes = secrets.token_bytes(32)
+            encrypted_message_aes = aes_encrypt(key_aes, message)
+            encrypted_message_rsa = rsa_encrypt(public_key, encrypted_message_aes)
+            hashed_message = sha3_encrypt(encrypted_message_rsa)
+            print(f"{Fore.CYAN}Encrypted message with AES + RSA + SHA-3 Hash: {hashed_message}")
+
+        else:
+            print(f"{Fore.RED}Invalid choice. Please choose 1, 2, 3, 4, or 5.")
+
+        input("Press Enter to continue...")
+
+if __name__ == "__main__":
+    main()
+
